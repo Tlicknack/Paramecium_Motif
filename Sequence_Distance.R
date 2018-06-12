@@ -1,3 +1,4 @@
+#DONE
 #This program will compare multiple sequence allignments (fasta) and calculate "distances' between them
 #These distances will determine if this block of sequences in similar across the ~200nts
 #This will be used to determine which fastas will be run through MEME for motif discovery
