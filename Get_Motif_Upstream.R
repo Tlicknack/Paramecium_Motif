@@ -1,3 +1,4 @@
+#DONE
 #This script will: 
   #look for DNA motifs within the intergenic region of a genome of interest 
   #extract all upstream nt's to the start codon and downstream until the whole sequence == 150nts
