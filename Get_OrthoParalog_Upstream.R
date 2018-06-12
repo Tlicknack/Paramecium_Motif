@@ -28,9 +28,9 @@ extractUpstream = function(sp, geneID, lGFF, lfasta, fname){      #Pass species 
   #cat("scaf= ", scaf, ".....", "gene start= ", gene_start, ".....", "strand= ", row_geneID[,4], "\n")
   scafSeq = as.character(lfasta[[sp]][scaf])                      #return the entire sequence of the scaffold which holds the current gene
   if(row_geneID[,4] == "+"){                                      #extract the correct upstream sequence. if +, then its just 200bp from start of gene, if -, then its 200 from end of gene
-    upstream = substr(scafSeq, gene_start-200, gene_start)
+    upstream = substr(scafSeq, gene_start-200, gene_start)        #CHANGE TO GET DIFFERENT REGION OF UPSTREAM ... SET TO 200
   } else {
-    upstream = substr(scafSeq, gene_start, gene_start+200)
+    upstream = substr(scafSeq, gene_start, gene_start+200)         #CHANGE
     upstream = c2s(rev(comp(s2c(upstream))))                      #must reverse complement the gene on the minus strand. Seqinr has a strange way of doing this
   }
   return(upstream)
