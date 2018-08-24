@@ -1,0 +1,55 @@
+Bi:
+sed 's/BIA.V1_4.1.G/BIA.V1_4.1.P/' pbi-gene.tab > tmp
+mv tmp pbi-gene.tab
+
+Dec:
+sed 's/DEC.223.1.G/DEC.223.1.P/' pdec-gene.tab > tmp
+mv tmp pdec-gene.tab  
+
+Dodec:  
+sed 's/DODEC.274.1.G/DODEC.274.1.P/' pdodec-gene.tab > tmp
+mv tmp pdodec-gene.tab  
+
+Jen:
+sed 's/JENN.M.1.G/JENN.M.1.P/' pjen-gene.tab > tmp
+mv tmp pjen-gene.tab  
+
+Nov:   
+sed 's/NOV.TE.1.G/NOV.TE.M.1.P/' pnov-gene.tab > tmp
+mv tmp pnov-gene.tab  
+
+Oct:  
+sed 's/OCT.K8.1.G/OCT.K8.1.P/' poct-gene.tab > tmp
+mv tmp poct-gene.tab  
+
+Pent: 
+sed 's/PENT.87.1.G/PENT.87.1.P/' ppent-gene.tab > tmp
+mv tmp ppent-gene.tab  
+
+Prim: 
+sed 's/PPRIMG/PPRIMP/' pprim-gene.tab > tmp
+mv tmp pprim-gene.tab  
+
+Quad:
+sed 's/NiA.1.G/NiA.1.P/' pquad-gene.tab > tmp
+mv tmp pquad-gene.tab  
+
+Sept:
+sed 's/SEPT.38.1.G/SEPT.38.1.P/' psept-gene.tab > tmp
+mv tmp psept-gene.tab  
+
+Sex:
+sed 's/SEX.AZ8_4.1.G/SEX.AZ8_4.1.P/' psex-gene.tab > tmp
+mv tmp psex-gene.tab  
+
+Son:
+sed 's/SON.ATCC_30995.1.G/SON.ATCC_30995.1.P/' pson-gene.tab > tmp
+mv tmp pson-gene.tab  
+
+Tet:  
+sed 's/TET.51.1.G/TET.51.1.P/' ptet-gene.tab > tmp
+mv tmp ptet-gene.tab  
+
+Tre:
+sed 's/TRED.209.2.G/TRED.209.2.P/' ptre-gene.tab > tmp
+mv tmp ptre-gene.tab  
