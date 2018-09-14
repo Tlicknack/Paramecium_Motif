@@ -226,13 +226,35 @@ write.csv(final_dataframe, file="MEMExmlParaOrtholog.csv")
 #-----
 Will add to this as new data are needed. For now, consensus sequence will do.
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Many of thse motifs were TOO GOOD, and their surrounding regions were highly conserved. We want to focus TFBS studies on regions that are highly variable around the motif and conserved within the motif.
+I alligned these upstream sequences with MUSCLE
+#Bash Script
+#-----
+#!/bin/bash
+#Run muscle allignment software on upstream sequences of para-orthologs
+
+seq=/N/u/tlicknac/Carbonate/Paramecium_Upstream_Sequences/*
+
+cd /N/u/tlicknac/Carbonate/Paramecium_Upstream_Alligned/
+
+for fasta in $seq
+do
+        echo $fasta
+        outfile="$(basename $fasta)"
+        muscle -in $fasta -out $outfile
+done 
+#-----
+#The original plan was to count mismatches between all sequences in each fasta file (fasta containing upstream alligned sequences), but that script was too messy
+#I now want to use the MEME output to compare surrounding sequences... will return to this later
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 Now time to go and see how often these motifs hit within each of the Aurelia genomes
 Interesting motifs by eye: 
 	GCCCTCTTGGCCAAGTGG had an e_score of 9e^-235 and contains the palindrome CTTGGCCAAG 
 	AAACCTGCAGGAGGACCT had an e_score of 4.3e^-227 and contains the palindrome CCTGCAGG ... very close to start codon
 	GATCAGAGTGGCGAATGT had an e_score of 2.3e^-227 and contains an odd pattern very close to motif start site 
 		paralogs either have aaaaatattt or taaaaaaata upstream ... aaaaataggt or ttaaaaaata ... close'ish to start codon ... found in pbi_114359 and pbi_11751 !
-	#Im running FIMO on some of these interesting motifs... jsut to see
+	#Im running FIMO on some of these interesting motifs... just to see
 
 #Now get PWMs
 #-----
@@ -278,7 +300,7 @@ for(subdir in meme_files){
 Now we have 16587 .tab files containins PWMs, most of length 18
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 These files proved difficult to work with due to the large sizes and inflated e_values for motifs
-I, therefore, reran MEME with motifs set to 6-12. This is more like the size of a TFBS and will allow for quicker parsing of files
+I, therefore, reran MEME with motifs set to 6-12. This is more like the size of a TFBS and will allow for quicker parsing of files !!!!!!!!!!!!!!!!!!!
 To confirm which size is preferred, I wrote a script to parse MEME outputs for motifs of size 5-18 and of size 6-12
 
 Rscript:
@@ -305,7 +327,391 @@ hist(v_evalues)
 #-----
 I can now look at distributions and determine which parameters are easy to work with
 
+I wrote an R script to extract the e_values and look at their summary statistics. (cant get hist() to look nice) 
+R script:
+#-----
+directory = "/N/dc2/scratch/tlicknac/All_Aurelias_MEME_Results/"
+meme_files = list.files(directory, recursive=F)                                                               #List all subdirectories containing meme outputs                                                                                  
+v_evalues = c()
+for(subdir in meme_files){
+  meme = paste(directory, subdir, "/meme.xml", sep="")                                                                #Concatenate path to file name
+  data = xmlParse(meme)                                                                                               #Get xml file
+  xml_data = xmlToList(data)                                                                                          #Convert xml format to an R list
+  for(i in 1:length(xml_data$motifs)){
+    evalue = as.numeric(xml_data$motifs[[i]]$.attrs[9])
+    v_evalues = append(v_evalues, evalue)
+  }
+}
+summary(v_evalues)
+#-----
+First 500 meme output files from 5-18nt motifs:
+	Range: 0-1200
+	Mean: 2.383
+	Median: 0
+So more than half of these hits are essentially zero... probably because R cant compare e^-100 and e^-150
+
+Fixed this using the following function:
+#-----
+print(median(v_evalues), digits=20)
+#-----
+This gives me the real number I want; 1.999e^-49
+
+Repeated this with other MEME output
+First 500 meme output files from 6-12nt motifs:
+	Range: 0-1900
+	Mean: 3.97
+	Median: 0
+Actual median: 5.24999e^-30
+
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Jeff wrote me a C++ script that will scan the genome and assign scores to each position base don the PWM
 #This will allow us to visualize the distribution of scores and determine which regions of the genome are enriched for these signatures
 #Can eventually use annotation to associate high score regions with gene function
+
+#I must first extract the PWM
+
+#R script: 
+getPWM = function(xml_data, subdir){
+  lPWMs = list()
+  len = length(xml_data$motifs$motif$scores$alphabet_matrix)
+  nucl = c("A", "C", "G", "T")
+  
+  for(i in 1:len){
+      ascore = xml_data$motifs$motif$scores$alphabet_matrix[[i]][1]$value$text
+      cscore = xml_data$motifs$motif$scores$alphabet_matrix[[i]][2]$value$text
+      gscore = xml_data$motifs$motif$scores$alphabet_matrix[[i]][3]$value$text
+      tscore = xml_data$motifs$motif$scores$alphabet_matrix[[i]][4]$value$text
+      motif_df = t(data.frame(c(ascore, cscore, gscore, tscore)))
+      colnames(motif_df) = nucl
+      motif_file = paste(subdir, i, sep="_")
+      lPWMs[[motif_file]] = motif_df 
+  }
+  return(lPWMs)
+}
+
+#MAIN 
+directory = "/N/dc2/scratch/tlicknac/12nt_MEME_Results/"                                                      #location of meme outputs
+meme_files = list.files(directory, recursive=F)                                                                       #List all subdirectories containing meme outputs
+                                                                                               #^
+for(subdir in meme_files){
+  cat("Working on file: ", subdir, "\n")
+  meme = paste(directory, subdir, "/meme.xml", sep="")                                                                #Concatenate path to file name
+  data = xmlParse(meme)                                                                                               #Get xml file
+  xml_data = xmlToList(data)                                                                                          #Convert xml format to an R list
+  #Get PWM in List()
+  lPWMs = getPWM(xml_data, subdir)                                                                                    #Function to return list of data frames of PWMs
+  df_PWMs = data.frame(matrix(unlist(lPWMs), nrow=length(lPWMs), byrow=T), stringsAsFactors=F, row.names=NULL)
+  colnames(df_PWMs) = c("A", "C", "G", "T")
+  row.names(df_PWMs) = NULL
+  filename = paste("/N/dc2/scratch/tlicknac/12nt_PWMs/", subdir, "_PWM", ".tab", sep="")
+  cat("Writing to file: ", filename, "\n")
+  write.csv(df_PWMs, file=filename, row.names=F)
+}
+#-----
+#This is the master XML parser that I created a function in to get the PWM
+
+#Oddly enough, I ran into errors where some MEME files weren't made correctly (no XML)
+#This would maniffest as the error message "No XML file given" for a certain MEME output directory
+#I ended up deleting files 1 by 1 until I realized I can sort each directory (EX: pbi_100.fasta/) based on its contents
+#Bash script:
+#-----
+ls -lh ../12nt_MEME_Results/ | cut -d" " -f5 | sort -r 
+#-----
+#This revealed that no more files were empty
+#Each time I removed a file from the 12nt_MEME_Results, I went back into R and cut the meme_files variable to prevent re-running files that were done
+
+#R command:
+meme_files = meme_files[which(meme_files == "pbi_***.fasta"):length(meme_files)]  #where *** is the file for which the corresponding directory lacked an XML file
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#In addition to searching with PWM, I searched with the regular Expression for each motif
+#This more straightforward
+#Writing script called "GetRegexDistribution.R"
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#I wentback to writing a script that would count mismatches in each fasta file
+#The first way to do this invovled aligning the upstream sequences with muscle and then counting mismatches between each position
+#I wrote an interesting script to do this
+#R script
+#-----
+library("seqinr")
+
+
+#MAIN
+input_list = list.files("/N/u/tlicknac/Carbonate/Paramecium_Upstream_Alligned/", "*.fasta", all.files=FALSE, recursive=FALSE)  #get all fasta files in a directory   
+lmismatches = list()
+
+for(i in 1:length(input_list)) {                                                      #iterate through fasta file names
+  cat("Onto file number: ", i, "\n")
+  seq_dist = 0
+  path = "/N/u/tlicknac/Carbonate/Paramecium_Upstream_Alligned/"                      #save path to files as a string       
+  path_i = paste(path, input_list[[i]], sep="")                                       #concatenate path and i'th filename
+  input_fasta = read.alignment(path_i, format="fasta", forceToLower = TRUE)           #input the fasta files using allignment reader, which saves elements in the following way:
+  #[[1]] = number of seqs in the current fasta file,    [[2]] = list of geneIDs,                          [[3]] = list of sequence strings
+  #[[1]] has 1 dimension,                               [[2]][i] allows you to go acress i'th geneID,     [[3]][i] allows you to access the i'th seq
+  current_file = input_list[[i]]
+  current_seqs = input_fasta[[3]]
+  number_of_seqs = length(current_seqs)
+  total_mismatches = 0
+  len_alignment = nchar(current_seqs[[1]])
+  vmismatches = c()
+  
+  for(pos in 1:len_alignment){
+    vpos = c()                                                      #initiate vector of positions
+    
+    for(seq in 1:number_of_seqs){
+      vpos = append(vpos, substr(current_seqs[seq], pos, pos))      #append vector of positions with current element
+    }
+    elements = sort(table(vpos), decreasing=T)                      #create a count for each element in vector... "-" "a" "t" "c" "g"
+    most_common = names(elements[1])                                #return character that is most abundant ... CAN USE TO BUILD CONSENSUS SEQUENCE 
+    number_of_mismatches = length(which(vpos != most_common))       #returns integer of positions that differ from consensus
+    vmismatches = append(vmismatches, number_of_mismatches)         #append each integer to vector
+    mismatch_per_site = sum(vmismatches) / len_alignment            #calculate mismatches per site
+    
+  }
+  lmismatches[[i]] = c(input_list[[i]], mismatch_per_site)
+}
+final_df = t(data.frame(lmismatches))
+colnames(final_df) = c("File", "Mismatch/Site")
+write.csv(final_df, file="Motif_MismatchPerSite.csv", sep="\t", row.names=F)
+#-----
+#Here, I get the most common element at each position (e.g. "A") and count the occurences of anything else.
+#This drastically reduces the time it takes to run
+#One issue is that it treates indels and mismatches (i.e. if the most common element is "-", then any other letter is a mismatch)... I can fix this if bioinformaticians dont like it
+
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+
+#I re-aligned the All Aurelias Upstream and calculated the distance with the above code, then re-extracted the regular expressions and evalues
+#I then combined the two so that I could have a file with each motif (as a regex), an e_value, mismatches per site in that upstream region, and the WGD family
+#Rscript:
+#-----
+all_table = read.table("MEMExmlParaOrtholog_withWGD.csv", sep=",", header = T, as.is = T)
+
+motif_table = all_table[1:nrow(all_table),1:3]      #change to read.table(motif_evalue.csv)
+mismatch_table = all_table[1:nrow(all_table), 4:5]  #change to read.table(mismatchpersite.csv)
+
+wgd_families = unique(motif_table$WGD_Family)
+final_df = data.frame(matrix(ncol = 4))
+colnames(final_df) = c("motif", "e_value", "WGD_Family", "rep_mismatch")
+
+for(family in wgd_families){
+  family_df = motif_table[which(motif_table$WGD_Family == family),]
+  file_df = mismatch_table[which(mismatch_table$File == family),]
+  
+  if(nrow(file_df) > 0){
+    rep_mismatch =  rep(file_df$Mismatch.Site, times=nrow(family_df))
+    new_df = as.data.frame(cbind(family_df, rep_mismatch))
+    final_df = as.data.frame(rbind(final_df, new_df))
+  }
+}
+final_df = final_df[-1,]
+write.csv(final_df, file="All_Aurelias_12nt_Motif_Evalue_Mismatch.csv", sep=",", row.names=F)
+#-----
+#This worked fine and was pretty quick
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+After I got these mismatches per site measures, I began to look at these highly conserved regions Jeff found in his Tet-Bi-Sex analysis
+#In these regions, there is almost 100 sequence identity between paraorthologous intergenic sequences
+#I picked out some of these regions:
+	#pbi_6773.fasta, pbi_14988.fasta, pbi_5389.fasta, pbi_16671.fasta, pbi_5936.fasta, pbi_7785.fasta, pbi_10793.fasta
+		#These regions all are less than 0.2 mismatches/site... AKA 1 or two differences between sequences
+#I then went to their respective meme outputs to get a geneID from them
+	#All of these regions are only found in Sonninborni and Jenningsi
+	#THis explains the high E_Values for the motifs within them	
+#I tried to sort based on the ratio value calculated above
+	#Here I found a few interesting files:
+	#pbi_11169.fasta
+		#20 sequences
+		#Best motif: E_Value=1.2e^-82
+			#TGGTTTCTTTGC
+			#ACAGAA[TA]CGATG
+		#Found in front a gene that codes for a 54 aa peptide
+			#No predicted functional domains
+			#BLASTp'ed this peptide and found ZERO hits!!!!!!
+		#Gene in Tet is DE during autogamy ... late repression
+	#pbi_7468.fasta
+		#16 sequences
+		#Best motif: 3.6e^-68
+			#GATAACTGTGCA
+		#Codes for protein tyrosine kinase
+		#Gene in Tet is DE during autogamy... late repression
+	#pbi_10976.fasta
+		#13 sequences
+		#Best motif: E_Value=1.2e^-66
+			#GGCCACCATGGA
+		#Has a coiled-coil domain
+			#Potential TF
+		#Gene in Tet is DE during autogamy... early peak
+	
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#In addition checking for mismatches within aligned upstream sequences, I also did this with MEME outputs
+	#THIS ONLY WORKS FOR THE FIRST MOTIF IN EACH FILE. I TRIED TO WRITE A SCRIPT FOR ALL OF THEM BUT I FAILED
+#R script
+#-----
+install.packages("XML")
+library("XML")
+
+getSurroundingMismatch = function(xml_data){
+  number_of_seqs = length(xml_data$motifs$motif$contributing_sites)
+  vleft = c()
+  vright = c()
+  vmotifs = c()
+  
+  for(i in 1:number_of_seqs){
+    left_flank = xml_data$motifs$motif$contributing_sites[i]$contributing_site$left_flank  #should be 10 or fewer nts
+    right_flank = xml_data$motifs$motif$contributing_sites[i]$contributing_site$right_flank 
+    motif = paste(as.character(xml_data$motifs$motif$contributing_sites[i]$contributing_site$site), collapse="")
+    
+    vleft = append(vleft, left_flank)
+    vright = append(vright, right_flank)
+    vmotifs = append(vmotifs, motif)  
+  }
+  n_right = nchar(vright[which.max(nchar(vright))])
+  n_left = nchar(vright[which.max(nchar(vleft))]) 
+  n_motif = nchar(vmotifs[which.max(nchar(vmotifs))]) 
+  vmismatches = c()
+  
+  for(l in 1:n_left){
+    vpos = c()
+    for(j in 1:number_of_seqs){
+      vpos = append(vpos, substr(vleft[j], l, l))
+    }
+    elements = sort(table(vpos), decreasing=T)                      #create a count for each element in vector... "-" "a" "t" "c" "g"
+    most_common = names(elements[1])                                #return character that is most abundant ... CAN USE TO BUILD CONSENSUS SEQUENCE 
+    number_of_mismatches = length(which(vpos != most_common))       #returns integer of positions that differ from consensus
+    vmismatches = append(vmismatches, number_of_mismatches)         #append each integer to vector
+  }
+  vmismatches = append(vmismatches, "-")  #so I can substr() and make an average of mismatches on the motif... cant align motifs due to differing size
+  for(m in 1:n_motif){
+    vpos = c()
+    for(q in 1:number_of_seqs){
+      vpos = append(vpos, substr(vmotifs[q], m, m))
+    }
+    elements = sort(table(vpos), decreasing=T)                      #create a count for each element in vector... "-" "a" "t" "c" "g"
+    most_common = names(elements[1])                                #return character that is most abundant ... CAN USE TO BUILD CONSENSUS SEQUENCE 
+    number_of_mismatches = length(which(vpos != most_common))       #returns integer of positions that differ from consensus
+    vmismatches = append(vmismatches, number_of_mismatches)         #append each integer to vector
+  }
+  vmismatches = append(vmismatches, "-")
+  for(r in 1:n_right){
+    vpos = c()
+    for(f in 1:number_of_seqs){
+      vpos = append(vpos, substr(vleft[f], r, r))
+    }
+    elements = sort(table(vpos), decreasing=T)                      #create a count for each element in vector... "-" "a" "t" "c" "g"
+    most_common = names(elements[1])                                #return character that is most abundant ... CAN USE TO BUILD CONSENSUS SEQUENCE 
+    number_of_mismatches = length(which(vpos != most_common))       #returns integer of positions that differ from consensus
+    vmismatches = append(vmismatches, number_of_mismatches)         #append each integer to vector
+  }
+  return(vmismatches)
+}
+
+directory = "/N/dc2/scratch/tlicknac/12nt_MEME_Results/"                                                      #location of meme outputs
+meme_files = list.files(directory, recursive=F)                                                                       #List all subdirectories containing meme outputs
+#meme_files for mismatch("pbi_7605.fasta","pbi_8587.fasta","pbi_9932.fasta","pbi_6015.fasta","pbi_676.fasta","pbi_1351.fasta","pbi_736.fasta","pbi_16238.fasta","pbi_11666.fasta","pbi_4750.fasta","pbi_11751.fasta","pbi_14359.fasta","pbi_437.fasta","pbi_16238.fasta","pbi_16238.fasta","pbi_7738.fasta","pbi_736.fasta","pbi_5454.fasta","pbi_9266.fasta","pbi_826.fasta","pbi_11456.fasta","pbi_15035.fasta","pbi_4174.fasta","pbi_8155.fasta","pbi_7797.fasta","pbi_4351.fasta","pbi_1349.fasta","pbi_7013.fasta","pbi_27.fasta","pbi_10641.fasta","pbi_6880.fasta","pbi_15386.fasta","pbi_11637.fasta","pbi_7456.fasta","pbi_2096.fasta","pbi_4750.fasta","pbi_10630.fasta","pbi_4352.fasta","pbi_11457.fasta","pbi_7035.fasta","pbi_437.fasta","pbi_16238.fasta","pbi_1411.fasta","pbi_658.fasta","pbi_7344.fasta","pbi_2103.fasta","pbi_13747.fasta","pbi_756.fasta","pbi_10054.fasta")
+
+firstOne = T  #many things                                                                                                           
+lmismatches = list()  #mismatch
+lmotif_mismatches = list()  #mismatch
+lleft_mismatches = list()  #mismatch
+lright_mismatches = list()  #mismatch
+
+for(subdir in meme_files){
+  cat("Working on file: ", subdir, "\n")
+  meme = paste(directory, subdir, "/meme.xml", sep="")                                                                #Concatenate path to file name
+  data = xmlParse(meme)                                                                                               #Get xml file
+  xml_data = xmlToList(data)                                                                                          #Convert xml format to an R list
+  lmismatches[[subdir]] = getSurroundingMismatch(xml_data)
+  
+  for(mis in 1:length(lmismatches)){
+    motif_mismatches = lmismatches[[mis]][ (which(lmismatches[[mis]] == "-")[1]+1) : (which(lmismatches[[mis]] == "-")[2]-1) ]  #get elements in vector that are inside the "-"
+    lmotif_mismatches[[mis]] = motif_mismatches
+    
+    left_mismatches = lmismatches[[mis]][1:which(lmismatches[[mis]] == "-")[1]-1]
+    lleft_mismatches[[mis]] = left_mismatches
+    
+    right_mismatches = lmismatches[[1]][ (c(which(lmismatches[[1]] == "-")[2]+1) : length(lmismatches[[1]]))]
+    lright_mismatches[[mis]] = right_mismatches
+  }
+}
+save.image(file = "12nt_MEME_Mismatch_Flanks.RData")
+#-----
+#My program died at pbi_11372.fasta
+	#interestingly, the best motif: TTATTAATAAAA is located exactly at position 190 in 16 sequences (aka, it has no right_flank... it hits the TSS)
+#I simply looked for which file broke the code, and then cut meme_files accordingly
+#R code
+meme_files = meme_files[which(meme_files == "pbi_11372.fasta":length(meme_files)]
+	#Then re-ran
+
+Same thing happened to 11505... reran above
+
+
+#Here is a list of all files that broke the code due to lacking right flank
+	#pbi_11372.fasta
+		#Motif: TTATTAATAAAA
+		#E_Value: 4.6e-012
+		#Number of seqs: 16
+		#Positional info: Start=190 everytime 
+		#Conservation: 100% except NOV at position 6 (a-->t)
+		#Left_Flank: very messy	
+		#Gene: PBIA.V1_4.1.P00340053... looks to be a protein tyrosine kinase
+			#BLASTp ID is 94% to Sexaurelia's version and 95% to Tetraurelia's version
+	#pbi_11505.fasta
+		#Motif: TTTGTTTATTAA
+		#E_Value: 5.8e-023
+		#Number of seqs: 16
+		#Positional info: Start=190 everytime
+		#Conservation: 100%
+		#Left_Flank: fairly clean
+		#Gene: PTET.51.1.P1010076... looks to be a cAMP-dependent protein kinase
+			#BLASTp ID is 91% to Biaurelia's version and 88% to Sexaurelia's version
+	#pbi_12497.fasta
+		#Motif: TTAATCCATAA
+		#E_Value: 9.5e-042
+		#Number of seqs: 23
+		#Positional info: Start=191 everytime
+		#Conservation: 3 positions with 1 variant, 1 position with 2 variants (2 occurences of 1 of them)
+		#Left_Flank: pretty messy
+		#Gene: PTET.51.1.P1740007... looks like a Zinc Finger, Coiled Coil DNA-Binding Protein
+			#Biaurelia=96%, Sexuaurelia=94%
+			#PTET.51.1.P1870013 is the same functionally
+	#pbi_14604.fasta
+		#Motif: TTTGAATTTGAA
+		#E_Value: 9.4e-049
+		#Number of seqs: 21
+		#Positional info: 190 everytime
+		#Conservation: 100%
+		#Left_Flank: very clean
+		#Gene: PTET.51.1.P0760070... coiled coil DNA-Binding Protein
+			#Bi 92%
+			#Sex 88%
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
