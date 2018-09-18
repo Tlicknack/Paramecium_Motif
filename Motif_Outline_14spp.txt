@@ -687,7 +687,76 @@ Same thing happened to 11505... reran above
 		#Gene: PTET.51.1.P0760070... coiled coil DNA-Binding Protein
 			#Bi 92%
 			#Sex 88%
-	
+	#pbi_15046.fasta
+		#Motif: TGGTATTAATAA
+		#E_Value: 1.7e-022
+		#Number of seqs: 14
+		#Positional info: 190 everytime
+		#Conservation: 2 sites with 1 variant, 1 site with 2 variants, 1 site with 3 variants
+		#Left_Flank: pretty clean
+		#Gene: PTET.51.1.P0650085... Cytochrome P450
+			#Bi: 87%
+			#Sex: 77%
+	#pbi_3106.fasta
+		#Motif: TATTTAACAGAA
+		#E_Value: 1.4e-041
+		#Number of seqs: 21
+		#Positional info: 190 everytime
+		#Conservation: 1st 3 positions have a few variants, next 9 are 100%
+		#Left_Flank: moderate
+		#Gene: PBIA.V1_4.1.P00040182... some Protein Kinase
+			#Tet 92%
+			#Sex 88%
+	#pbi_3970.fasta
+		#Motif: TTGCAGTAATAA
+		#E_Value: 3.5e-002
+		#Number of seqs: 4
+		#Positional info: 190 everytime
+		#Conservation: 4th to last position has 1 variant
+		#Left_Flank: almost perfect
+		#Gene: PSEX.AZ8_4.1.P0400064... Tyrosine Kinase
+			#Bi 83%
+			#Tet 80%
+	#pbi_4515.fasta
+		#Motif: CTCACTTCATAA
+		#E_Value: 4.5e-027
+		#Number of seqs: 10
+		#Positional info: 190 everytime
+		#Conservation: 100%
+		#Left_Flank: pretty clean
+		#Gene: PSEX.AZ8_4.1.P0150082
+			#Bi 
+			#Tet 
+	#pbi_5393.fasta
+		#Motif: GTAATATAATCA
+		#E_Value: 
+		#Number of seqs: 16
+		#Positional info: 190 everytime
+		#Conservation: position 2 and 6 have 1 variant
+		#Left_Flank: messy
+		#Gene: PTET.51.1.P0260332
+			#Bi 
+			#Tet 
+	#pbi_5688.fasta
+		#Motif: TTTAACAGATAA
+		#E_Value: 1.1e-053
+		#Number of seqs: 21
+		#Positional info: 190 everytime
+		#Conservation: 100%
+		#Left_Flank: 
+		#Gene: 
+			#Bi 
+			#Tet 
+	#pbi_7306.fasta
+		#Motif: GATATTATTAAA
+		#E_Value: 4.8e-012
+		#Number of seqs: 14
+		#Positional info: 190 everytime
+		#Conservation: 3 positions with 2 variants, 1 with 3
+		#Left_Flank: pretty messy
+		#Gene: PTET.51.1.P1820035
+			#Bi 
+			#Tet	
 
 
 
