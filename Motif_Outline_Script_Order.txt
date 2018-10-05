@@ -45,4 +45,15 @@ Get Genomic Location of Motif
 			#This script requires another script given to me by Jeff
 				#C++ script: getPWM_Scores.cpp
 			#This will go position by position across a scaffold and return a score based on the MEME scoring matrix
-
+			#CHOOSE WHICH ASSEMBLIES TO USE with FASTAs variable
+			#CHOOSE WHICH PWMs TO USE WITH PWMs variable
+	2. Scan Regex against genome
+		#in progress
+	
+Relate Motif to Expression Data
+	1. Determine Genic/Intergenic Location of motif and append expression level to table
+		R script: Connect_PWM_Position_Genic_Feature.R
+			#This will take as an input the Intergenic GFFs and FPKM files for each spp you want to study
+				#Make sure the GFF and FPKM are of the same species as the getPWM_Scores_Paramecium.R script used
+			#For each score at each position, this will tell if its intergenic and if so, which genes surround it in which direction. Then, attach the fpkm for those genes (in log-phase growth)
+			
