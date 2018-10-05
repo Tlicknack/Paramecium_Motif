@@ -34,13 +34,15 @@ Run MEME on Gene Families
 Parse MEME Output
 	1. Extract all info from xml file
 		R script: GetAllMEMEInfo.R
-		
+			#set wantPWM=F
 	2. Create directory of PWMs
 		R script: GetAllMEMEInfo.R
-
-	2. Scan PWM against genome
+			#set wantPWM=T
+		
+Get Genomic Location of Motif
+	1. Scan PWM against genome
 		R script: getPWM_Scores_Paramecium.R
 			#This script requires another script given to me by Jeff
-			#C++ script: getPWM_Scores.cpp
-			#This will 
+				#C++ script: getPWM_Scores.cpp
+			#This will go position by position across a scaffold and return a score based on the MEME scoring matrix
 
