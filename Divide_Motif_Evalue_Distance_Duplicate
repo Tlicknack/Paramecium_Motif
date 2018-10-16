@@ -25,3 +25,5 @@ dup_motifs[which(as.numeric(dup_motifs$EValue) < 1e-140),]
 
 #Look for UTR motifs
 utr_motifs = dfmotif[which(dfmotif$DistanceToStart < 15),]
+
+#Look at high E-value Motifs
