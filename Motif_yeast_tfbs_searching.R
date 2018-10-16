@@ -1,0 +1,27 @@
+setwd("~/Desktop/Paramecium_Genome_Data")
+
+dfmotif = read.csv("12nt_MEME_All_Info.csv", header=T)
+
+#Compare to yeast database
+dfyeast_tfbs = read.table("Yeast_TFBS.tab", header=F)
+colnames(dfyeast_tfbs) = c("Element", "Transcription-Factor", "Regex", "Something")
+
+vhits = c()
+for(i in 1:nrow(dfyeast_tfbs)){
+  hit = gregexpr(dfyeast_tfbs$Regex[i], dfmotif$Regex, ignore.case = T)
+  hits = which(as.numeric(hit) != -1)
+  vhits = append(vhits, hits)
+}
+
+dfhits = dfyeast_tfbs[vhits,]
+dfhits = dfhits[which(is.na(dfhits$Element) == F),]
+
+#Look for duplciated motifs
+dup_motifs = dfmotif[which(duplicated(dfmotif$Consensus)),]
+median(as.numeric(format(dup_motifs$EValue, scientific=T)))
+hist(log(as.numeric(format(dup_motifs$EValue, scientific=T)), base=10), breaks=100, main="Distribution of E-values for Duplicated Motifs", xlab="log(E-value)")
+
+dup_motifs[which(as.numeric(dup_motifs$EValue) < 1e-140),]
+
+#Look for UTR motifs
+utr_motifs = dfmotif[which(dfmotif$DistanceToStart < 15),]
